@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Cinzel', 'Hind Siliguri', serif;
+    --font-bengali: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+    --font-sans: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-bengali);
+    background-color: #0b1520;
+    color: #f5ebd6;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.font-display-pirate {
+  font-family: var(--font-display);
+}
+
+.font-bengali {
+  font-family: var(--font-bengali);
+  line-height: 1.6;
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbar for logs and guides */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 130, 70, 0.45);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 160, 91, 0.75);
+}
+
+/* Ship deck wood & parchment textures */
+.wood-deck-bg {
+  background-color: #16100c;
+  background-image:
+    radial-gradient(ellipse at 50% 45%, rgba(44, 28, 17, 0.75) 0%, rgba(12, 18, 28, 0.96) 78%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 220, 170, 0.025) 0px,
+      rgba(255, 220, 170, 0.025) 2px,
+      transparent 2px,
+      transparent 64px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.32) 0px,
+      rgba(0, 0, 0, 0.32) 2px,
+      rgba(42, 26, 16, 0.18) 2px,
+      rgba(42, 26, 16, 0.18) 38px
+    );
+}
+
+.parchment-panel {
+  background-color: #e6d2aa;
+  background-image:
+    radial-gradient(circle at 50% 35%, rgba(250, 240, 215, 0.65), rgba(212, 184, 135, 0.92));
+  color: #23170d;
+}
+
+.cabin-wood-panel {
+  background-color: #21150e;
+  background-image: linear-gradient(180deg, rgba(46, 30, 19, 0.94) 0%, rgba(24, 15, 10, 0.98) 100%);
+  border: 1px solid rgba(196, 148, 82, 0.32);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 225, 175, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
