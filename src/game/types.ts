@@ -124,7 +124,8 @@ export interface GameLogEntry {
     | 'pickpocket_cancel'
     | 'elimination'
     | 'round_end'
-    | 'game_end';
+    | 'game_end'
+    | 'host_transfer';
   textBn: string;
   textEn: string;
 }
@@ -154,6 +155,7 @@ export type TurnPhase =
 
 export interface GameState {
   matchId: string;
+  hostPlayerId: string;
   settings: GameSettings;
   round: number;
   turnNumber: number;

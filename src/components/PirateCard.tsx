@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { CHARACTERS, COIN_ASSET_URL } from '../game/cards';
 import { CardValue, Language } from '../game/types';
 
+export type CardAnimationVariant = 'none' | 'deal' | 'slide-play' | 'flip' | 'discard';
+
 interface PirateCardProps {
   value: CardValue;
   faceDown?: boolean;
@@ -10,6 +12,7 @@ interface PirateCardProps {
   selected?: boolean;
   disabled?: boolean;
   mandatory?: boolean;
+  animationVariant?: CardAnimationVariant;
   onClick?: () => void;
   onInspect?: (value: CardValue) => void;
   badgeText?: string;
@@ -17,11 +20,19 @@ interface PirateCardProps {
 }
 
 const SIZE_CLASSES: Record<NonNullable<PirateCardProps['size']>, string> = {
-  xs: 'w-16 h-24 sm:w-18 sm:h-27 rounded-lg',
-  sm: 'w-24 h-36 sm:w-28 sm:h-42 rounded-xl',
-  md: 'w-32 h-48 sm:w-36 sm:h-54 rounded-xl',
-  lg: 'w-36 h-54 sm:w-42 sm:h-63 xl:w-44 xl:h-66 rounded-2xl',
-  xl: 'w-48 h-72 sm:w-56 sm:h-84 rounded-2xl',
+  xs: 'w-14 h-21 sm:w-16 sm:h-24 rounded-xl',
+  sm: 'w-24 h-36 sm:w-26 sm:h-39 rounded-xl',
+  md: 'w-32 h-48 sm:w-36 sm:h-54 rounded-2xl',
+  lg: 'w-36 h-54 sm:w-40 sm:h-60 xl:w-44 xl:h-66 rounded-2xl',
+  xl: 'w-44 h-66 sm:w-52 sm:h-78 rounded-2xl',
+};
+
+const ANIMATION_CLASSES: Record<CardAnimationVariant, string> = {
+  none: '',
+  deal: 'animate-card-deal',
+  'slide-play': 'animate-card-slide-play',
+  flip: 'animate-card-flip-2d',
+  discard: 'animate-card-discard',
 };
 
 export const PirateCard: React.FC<PirateCardProps> = ({
@@ -32,6 +43,7 @@ export const PirateCard: React.FC<PirateCardProps> = ({
   selected = false,
   disabled = false,
   mandatory = false,
+  animationVariant = 'none',
   onClick,
   onInspect,
   badgeText,
@@ -39,26 +51,31 @@ export const PirateCard: React.FC<PirateCardProps> = ({
 }) => {
   const [imgError, setImgError] = useState(false);
   const def = CHARACTERS[value] ?? CHARACTERS[0];
+  const animClass = ANIMATION_CLASSES[animationVariant];
 
   if (faceDown) {
     return (
       <div
         onClick={!disabled ? onClick : undefined}
-        className={`relative select-none overflow-hidden border-2 border-[#c89d54]/70 bg-gradient-to-br from-[#2a1810] via-[#1b0f0a] to-[#0f0906] shadow-xl transition-transform duration-150 shrink-0 ${
+        className={`relative select-none overflow-hidden border-2 border-[#d4af37]/80 bg-gradient-to-br from-[#2a1810] via-[#1b100a] to-[#0d241f] shadow-[0_10px_24px_rgba(0,0,0,0.72)] transition-transform duration-150 ease-out shrink-0 ${
           SIZE_CLASSES[size]
-        } ${onClick && !disabled ? 'cursor-pointer hover:-translate-y-1' : ''} ${className}`}
+        } ${animClass} ${
+          onClick && !disabled
+            ? 'cursor-pointer hover:-translate-y-1.5 hover:-rotate-1 hover:border-[#f3d27a]'
+            : ''
+        } ${className}`}
         aria-label={language === 'bn' ? 'গোপন কার্ড' : 'Face-down card'}
       >
-        {/* Ornate pirate card back pattern */}
-        <div className="absolute inset-1.5 rounded-lg border border-[#c89d54]/40 flex flex-col items-center justify-center p-2 bg-[radial-gradient(circle_at_center,rgba(200,157,84,0.18),transparent_75%)]">
+        {/* Ornate antique-gold pirate card back pattern */}
+        <div className="absolute inset-1.5 rounded-lg border border-[#d4af37]/45 flex flex-col items-center justify-center p-2 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.22),transparent_76%)]">
           <img
             src={COIN_ASSET_URL}
             alt="Pirate Skull Crest"
             referrerPolicy="no-referrer"
-            className="w-3/5 h-3/5 object-contain opacity-85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
+            className="w-3/5 h-3/5 object-contain opacity-90 drop-shadow-[0_3px_8px_rgba(0,0,0,0.85)]"
           />
           {size !== 'xs' && (
-            <span className="mt-1 text-xs sm:text-sm font-extrabold tracking-widest text-[#e6c687] uppercase">
+            <span className="mt-1 text-xs sm:text-sm font-extrabold tracking-widest text-[#ebd494] uppercase">
               জলদস্যু
             </span>
           )}
@@ -82,21 +99,23 @@ export const PirateCard: React.FC<PirateCardProps> = ({
       onClick={!disabled ? onClick : undefined}
       aria-label={`${def.nameBn} (${def.nameEn}) - Value ${def.value}`}
       aria-disabled={disabled}
-      className={`group relative select-none overflow-hidden transition-all duration-150 shrink-0 ${
+      className={`group relative select-none overflow-hidden transition-all duration-150 ease-out shrink-0 ${
         SIZE_CLASSES[size]
-      } ${
+      } ${animClass} ${
         selected
-          ? 'ring-4 ring-amber-400 -translate-y-2.5 shadow-[0_16px_34px_rgba(245,158,11,0.5)] border-2 border-amber-300'
-          : 'border-2 border-[#d4b483]/60 shadow-[0_8px_20px_rgba(0,0,0,0.68)]'
+          ? 'ring-4 ring-[#f59e0b] -translate-y-3.5 scale-[1.03] shadow-[0_18px_38px_-4px_rgba(245,158,11,0.52)] border-2 border-[#fde68a]'
+          : 'border-2 border-[#d4af37]/85 shadow-[0_10px_24px_rgba(0,0,0,0.72)]'
       } ${
         disabled
           ? 'opacity-45 saturate-50 cursor-not-allowed'
           : onClick
-          ? 'cursor-pointer hover:-translate-y-1.5 hover:border-amber-300 hover:shadow-[0_14px_30px_rgba(245,158,11,0.28)]'
+          ? selected
+            ? 'cursor-pointer'
+            : 'cursor-pointer hover:-translate-y-2.5 hover:-rotate-1 hover:border-[#fde68a] hover:shadow-[0_16px_32px_rgba(212,175,55,0.34)]'
           : ''
-      } bg-[#e6d2aa] ${className}`}
+      } bg-[#ecd9b4] after:pointer-events-none after:absolute after:inset-1 after:rounded-[inherit] after:border after:border-[#fff3d1]/35 ${className}`}
     >
-      {/* Full authentic illustrated card image */}
+      {/* Full authentic illustrated card image on parchment base */}
       {!imgError ? (
         <img
           src={def.imageUrl}
@@ -106,10 +125,10 @@ export const PirateCard: React.FC<PirateCardProps> = ({
           className="w-full h-full object-cover object-top"
         />
       ) : (
-        /* Resilient fallback if image fails to load */
+        /* Resilient parchment & walnut fallback if image fails to load */
         <div className="w-full h-full flex flex-col justify-between p-3.5 bg-gradient-to-b from-[#2c1d12] to-[#140d08] text-[#f5ebd6]">
           <div className="flex items-center justify-between">
-            <span className="w-9 h-9 rounded-full bg-amber-700/80 flex items-center justify-center font-bold text-lg">
+            <span className="w-9 h-9 rounded-full bg-amber-700/80 border border-[#d4af37] flex items-center justify-center font-bold text-lg">
               {language === 'bn' ? def.bengaliNumber : def.value}
             </span>
           </div>
@@ -126,17 +145,17 @@ export const PirateCard: React.FC<PirateCardProps> = ({
 
       {/* Top-right controls & status badges (keeps top-left printed medallion 100% visible) */}
       {!isCompact && (
-        <div className="absolute top-2 right-2 flex items-center gap-1.5">
-          {(mandatory || badgeText) ? (
-            <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 text-xs font-extrabold tracking-tight shadow-md">
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
+          {mandatory || badgeText ? (
+            <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 text-xs font-extrabold tracking-tight shadow-md border border-amber-200">
               {badgeText ?? (language === 'bn' ? 'অবশ্যই খেলতে হবে!' : 'MUST PLAY!')}
             </span>
           ) : selected ? (
-            <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md">
+            <span className="px-2 py-0.5 rounded-md bg-[#f59e0b] text-slate-950 font-extrabold text-xs shadow-md border border-amber-200">
               {language === 'bn' ? '✓ নির্বাচিত' : '✓ Selected'}
             </span>
           ) : (
-            <span className="px-2 py-0.5 rounded-md bg-black/80 text-[#f5ebd6] font-mono-num text-xs font-extrabold border border-amber-400/30 shadow">
+            <span className="px-2 py-0.5 rounded-md bg-[#1a100a]/90 text-[#f5ebd6] font-mono-num text-xs font-extrabold border border-[#d4af37]/50 shadow">
               #{def.value}
             </span>
           )}
@@ -148,7 +167,7 @@ export const PirateCard: React.FC<PirateCardProps> = ({
                 onInspect(def.value);
               }}
               aria-label={`Inspect ${def.nameEn}`}
-              className="w-7 h-7 rounded-full bg-black/85 hover:bg-amber-500 text-amber-200 hover:text-slate-950 flex items-center justify-center text-xs sm:text-sm font-extrabold border border-amber-400/40 transition-colors shadow cursor-pointer"
+              className="w-7 h-7 rounded-full bg-[#1a100a]/90 hover:bg-amber-500 text-amber-200 hover:text-slate-950 flex items-center justify-center text-xs sm:text-sm font-extrabold border border-[#d4af37]/55 transition-colors shadow cursor-pointer"
               title={language === 'bn' ? 'বিস্তারিত দেখুন' : 'Inspect Card Details'}
             >
               i
@@ -159,7 +178,7 @@ export const PirateCard: React.FC<PirateCardProps> = ({
 
       {/* English translation overlay on bottom when English mode is active */}
       {language === 'en' && !isCompact && (
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/90 to-transparent p-2.5 text-left">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/90 to-transparent p-2.5 text-left z-10">
           <div className="text-sm font-extrabold text-amber-300 leading-tight">
             #{def.value} {def.nameEn}
           </div>
@@ -171,10 +190,11 @@ export const PirateCard: React.FC<PirateCardProps> = ({
 
       {/* Compact value badge for xs/sm cards */}
       {isCompact && (
-        <div className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/85 text-amber-300 font-mono-num text-xs font-extrabold border border-amber-400/40 shadow">
+        <div className="absolute top-1.5 right-1.5 z-10 px-2 py-0.5 rounded-md bg-[#1a100a]/90 text-amber-300 font-mono-num text-xs font-extrabold border border-[#d4af37]/50 shadow">
           {selected ? `✓ #${def.value}` : `#${def.value}`}
         </div>
       )}
     </div>
   );
 };
+

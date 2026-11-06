@@ -12,7 +12,10 @@ import {
   createDefaultSettings,
   createInitialGameState,
   playCard,
+  refreshGameByHost,
+  resolveHostOnDisconnect,
   resolveMerchantChoice,
+  restartMatchByHost,
   sanitizeStateForPlayer,
   startNextRound,
 } from './src/game/engine';
@@ -282,7 +285,12 @@ async function startServer() {
               return;
             }
             room.settings.playerCount = room.players.length;
-            room.gameState = createInitialGameState(room.players, room.settings);
+            room.gameState = createInitialGameState(
+              room.players,
+              room.settings,
+              Math.random,
+              room.hostPlayerId
+            );
             broadcastRoomState(room);
             scheduleServerAITurnIfNeeded(room);
             break;
@@ -347,13 +355,55 @@ async function startServer() {
             break;
           }
 
-          case 'rematch': {
+          case 'rematch':
+          case 'restart_match': {
             const meta = clientMap.get(ws);
             if (!meta) return;
             const room = rooms.get(meta.roomCode);
             if (!room) return;
 
-            room.gameState = createInitialGameState(room.players, room.settings);
+            if (room.hostPlayerId !== meta.playerId) {
+              ws.send(
+                JSON.stringify({
+                  type: 'error',
+                  messageBn: 'শুধুমাত্র হোস্ট ম্যাচটি পুনরায় শুরু করতে পারবেন!',
+                  messageEn: 'Only the host can restart the match!',
+                })
+              );
+              return;
+            }
+
+            room.gameState = room.gameState
+              ? restartMatchByHost(room.gameState, meta.playerId)
+              : createInitialGameState(
+                  room.players,
+                  room.settings,
+                  Math.random,
+                  room.hostPlayerId
+                );
+            broadcastRoomState(room);
+            scheduleServerAITurnIfNeeded(room);
+            break;
+          }
+
+          case 'refresh_game': {
+            const meta = clientMap.get(ws);
+            if (!meta) return;
+            const room = rooms.get(meta.roomCode);
+            if (!room || !room.gameState) return;
+
+            if (room.hostPlayerId !== meta.playerId) {
+              ws.send(
+                JSON.stringify({
+                  type: 'error',
+                  messageBn: 'শুধুমাত্র হোস্ট খেলাটি রিফ্রেশ করতে পারবেন!',
+                  messageEn: 'Only the host can refresh the game!',
+                })
+              );
+              return;
+            }
+
+            room.gameState = refreshGameByHost(room.gameState, meta.playerId);
             broadcastRoomState(room);
             scheduleServerAITurnIfNeeded(room);
             break;
@@ -377,9 +427,24 @@ async function startServer() {
         clientMap.delete(ws);
         const room = rooms.get(meta.roomCode);
         if (room) {
-          const p = room.players.find((pl) => pl.id === meta.playerId);
-          if (p) p.connected = false;
-          broadcastRoomState(room);
+          const outcome = resolveHostOnDisconnect(
+            room.players,
+            room.hostPlayerId,
+            meta.playerId,
+            room.gameState
+          );
+          if (outcome.shouldCloseRoom) {
+            if (room.aiTimer) {
+              clearTimeout(room.aiTimer);
+              room.aiTimer = undefined;
+            }
+            rooms.delete(room.code);
+          } else {
+            room.players = outcome.players;
+            room.hostPlayerId = outcome.hostPlayerId;
+            room.gameState = outcome.gameState;
+            broadcastRoomState(room);
+          }
         }
       }
     });

@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { Award, Eye, Lock, Play, RotateCcw, Swords, Trophy } from 'lucide-react';
+import {
+  AlertTriangle,
+  Award,
+  Eye,
+  Lock,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Swords,
+  Trophy,
+} from 'lucide-react';
 import { CHARACTERS, COIN_ASSET_URL } from '../game/cards';
 import { CardValue, GameState, Language } from '../game/types';
 import { PirateCard } from './PirateCard';
@@ -23,7 +33,7 @@ export const PrivacyOverlay: React.FC<{
       aria-label="Pass the Device Privacy Screen"
     >
       <div className="cabin-wood-panel max-w-lg w-full rounded-2xl p-7 text-center space-y-5">
-        <div className="w-20 h-20 mx-auto rounded-2xl bg-amber-500/20 border-2 border-amber-400/45 flex items-center justify-center text-4xl">
+        <div className="w-20 h-20 mx-auto rounded-2xl bg-amber-500/20 border-2 border-[#d4af37]/60 flex items-center justify-center text-4xl">
           {activePlayer.avatar}
         </div>
         <div>
@@ -108,6 +118,7 @@ export const MerchantModal: React.FC<{
                   size="lg"
                   language={language}
                   selected={isChosen}
+                  animationVariant="flip"
                   onClick={() => setSelectedUid(card.uid)}
                   onInspect={onInspectCard}
                 />
@@ -181,7 +192,12 @@ export const PrivateRevealModal: React.FC<{
               <span className="text-base font-extrabold text-amber-300">
                 {actor?.name}
               </span>
-              <PirateCard value={reveal.actorCard.value} size="lg" language={language} />
+              <PirateCard
+                value={reveal.actorCard.value}
+                size="lg"
+                language={language}
+                animationVariant="flip"
+              />
             </div>
           )}
 
@@ -194,7 +210,12 @@ export const PrivateRevealModal: React.FC<{
               <span className="text-base font-extrabold text-amber-300">
                 {target?.name}
               </span>
-              <PirateCard value={reveal.targetCard.value} size="lg" language={language} />
+              <PirateCard
+                value={reveal.targetCard.value}
+                size="lg"
+                language={language}
+                animationVariant="flip"
+              />
             </div>
           )}
         </div>
@@ -213,14 +234,25 @@ export const PrivateRevealModal: React.FC<{
 
 /**
  * 4. Pause Modal (`document.body.dataset.state = 'paused'`)
+ * Restart & Refresh controls are strictly visible ONLY to the host (`isHost === true`).
  */
 export const PauseModal: React.FC<{
   isOpen: boolean;
+  isHost: boolean;
   language: Language;
   onResume: () => void;
-  onRestart: () => void;
+  onRequestRestart: () => void;
+  onRequestRefresh: () => void;
   onReturnToTitle: () => void;
-}> = ({ isOpen, language, onResume, onRestart, onReturnToTitle }) => {
+}> = ({
+  isOpen,
+  isHost,
+  language,
+  onResume,
+  onRequestRestart,
+  onRequestRefresh,
+  onReturnToTitle,
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -236,8 +268,8 @@ export const PauseModal: React.FC<{
         </h2>
         <p className="text-sm sm:text-base text-amber-100/80">
           {language === 'bn'
-            ? 'খেলায় ফিরতে অথবা নতুন করে শুরু করতে নিচের বাটন বেছে নিন'
-            : 'Take a breather, captain, or restart the voyage'}
+            ? 'খেলায় ফিরতে অথবা মূল মেনুতে যেতে নিচের অপশন বেছে নিন'
+            : 'Resume your voyage or return to the title screen'}
         </p>
 
         <div className="space-y-3 pt-2">
@@ -248,13 +280,33 @@ export const PauseModal: React.FC<{
           >
             {language === 'bn' ? 'খেলায় ফিরুন (Resume)' : 'Resume Game'}
           </button>
-          <button
-            type="button"
-            onClick={onRestart}
-            className="w-full py-3 rounded-xl bg-amber-900/45 hover:bg-amber-800/60 border border-amber-500/35 text-amber-100 font-bold text-base sm:text-lg cursor-pointer"
-          >
-            {language === 'bn' ? 'পুনরায় শুরু করুন (Restart)' : 'Restart Match'}
-          </button>
+
+          {isHost && (
+            <>
+              <button
+                type="button"
+                onClick={onRequestRestart}
+                className="w-full py-3 rounded-xl bg-amber-900/45 hover:bg-amber-800/60 border border-[#d4af37]/45 text-amber-100 font-bold text-base sm:text-lg flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <RotateCcw className="w-5 h-5 text-amber-300" />
+                <span>
+                  {language === 'bn' ? 'পুনরায় শুরু করুন (Restart Match)' : 'Restart Match'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onRequestRefresh}
+                className="w-full py-3 rounded-xl bg-[#0e2e28]/80 hover:bg-[#143f37] border border-[#d4af37]/40 text-amber-100 font-bold text-base sm:text-lg flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-5 h-5 text-emerald-300" />
+                <span>
+                  {language === 'bn' ? 'খেলা রিফ্রেশ করুন (Refresh Game)' : 'Refresh / Reinitialize Game'}
+                </span>
+              </button>
+            </>
+          )}
+
           <button
             type="button"
             onClick={onReturnToTitle}
@@ -269,15 +321,93 @@ export const PauseModal: React.FC<{
 };
 
 /**
- * 5. Round Results & Overall Game Over / Victory Modal
+ * 5. Host-Only Confirmation Dialog for Restarting or Refreshing the Match
+ */
+export const HostConfirmModal: React.FC<{
+  actionType: 'restart' | 'refresh' | null;
+  isHost: boolean;
+  language: Language;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ actionType, isHost, language, onConfirm, onCancel }) => {
+  if (!actionType || !isHost) return null;
+
+  const isRestart = actionType === 'restart';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/82 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={isRestart ? 'Confirm Match Restart' : 'Confirm Game Refresh'}
+    >
+      <div className="cabin-wood-panel max-w-md w-full rounded-2xl p-6 sm:p-7 text-center space-y-5">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 border-2 border-[#d4af37]/60 flex items-center justify-center text-amber-300">
+          <AlertTriangle className="w-7 h-7" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="text-xs font-mono-num uppercase tracking-wider font-extrabold text-amber-400">
+            {language === 'bn' ? '👑 হোস্ট নিশ্চিতকরণ (Host Only)' : '👑 Host Confirmation'}
+          </span>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-amber-200">
+            {isRestart
+              ? language === 'bn'
+                ? 'আপনি কি ম্যাচটি পুনরায় শুরু করতে চান?'
+                : 'Restart the Current Match?'
+              : language === 'bn'
+              ? 'আপনি কি বর্তমান রাউন্ড রিফ্রেশ করতে চান?'
+              : 'Refresh & Reinitialize Current Round?'}
+          </h2>
+          <p className="text-sm sm:text-base text-amber-100/85 leading-relaxed">
+            {isRestart
+              ? language === 'bn'
+                ? 'ম্যাচ রিস্টার্ট করলে সকল খেলোয়াড়ের কয়েন ০ হয়ে যাবে এবং রাউন্ড ১ থেকে নতুন করে খেলা শুরু হবে।'
+                : 'Restarting will reset all players’ coins to 0 and start a fresh match from Round 1 for all connected players.'
+              : language === 'bn'
+              ? 'রিফ্রেশ করলে খেলোয়াড়দের অর্জিত কয়েন অক্ষুণ্ণ রেখে বর্তমান রাউন্ডের কার্ডগুলো নতুন করে ডিল করা হবে।'
+              : 'Refreshing preserves everyone’s earned coins while re-dealing the current round cleanly for all connected players.'}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-3 px-4 rounded-xl bg-black/60 hover:bg-black/80 border border-[#d4af37]/35 text-amber-200 font-bold text-sm sm:text-base cursor-pointer"
+          >
+            {language === 'bn' ? 'বাতিল করুন (Cancel)' : 'Cancel'}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm sm:text-base shadow-lg cursor-pointer"
+          >
+            {isRestart
+              ? language === 'bn'
+                ? 'হ্যাঁ, রিস্টার্ট করুন'
+                : 'Confirm Restart'
+              : language === 'bn'
+              ? 'হ্যাঁ, রিফ্রেশ করুন'
+              : 'Confirm Refresh'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * 6. Round Results & Overall Game Over / Victory Modal
  */
 export const RoundAndGameResultsModal: React.FC<{
   state: GameState;
+  isHost: boolean;
   language: Language;
   onNextRound: () => void;
   onRematch: () => void;
   onReturnToTitle: () => void;
-}> = ({ state, language, onNextRound, onRematch, onReturnToTitle }) => {
+}> = ({ state, isHost, language, onNextRound, onRematch, onReturnToTitle }) => {
   if (state.phase !== 'round_over' && state.phase !== 'game_over') return null;
 
   const isGameOver = state.phase === 'game_over';
@@ -293,7 +423,7 @@ export const RoundAndGameResultsModal: React.FC<{
     >
       <div className="cabin-wood-panel max-w-4xl w-full rounded-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Banner */}
-        <div className="px-6 py-5 bg-gradient-to-r from-[#2c190e] via-[#3d2212] to-[#2c190e] border-b border-amber-500/30 text-center">
+        <div className="px-6 py-5 bg-gradient-to-r from-[#2c190e] via-[#3d2212] to-[#2c190e] border-b border-[#d4af37]/35 text-center">
           <div className="inline-flex items-center gap-2 text-amber-400 text-sm font-mono-num font-bold uppercase tracking-wider mb-1">
             {isGameOver ? <Trophy className="w-5 h-5" /> : <Award className="w-5 h-5" />}
             <span>
@@ -365,7 +495,7 @@ export const RoundAndGameResultsModal: React.FC<{
                       className={`p-4 rounded-xl border-2 flex items-center justify-between gap-3.5 ${
                         isRoundWinner
                           ? 'bg-amber-500/15 border-amber-400'
-                          : 'bg-black/45 border-amber-500/25'
+                          : 'bg-black/45 border-[#d4af37]/25'
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
@@ -397,7 +527,7 @@ export const RoundAndGameResultsModal: React.FC<{
                             +{p.roundCoinsEarned}
                           </span>
                         )}
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/65 border border-amber-500/35">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/65 border border-[#d4af37]/40">
                           <img
                             src={COIN_ASSET_URL}
                             alt="Coin"
@@ -418,25 +548,33 @@ export const RoundAndGameResultsModal: React.FC<{
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4.5 bg-[#160e09] border-t border-amber-500/25 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-6 py-4.5 bg-[#160e09] border-t border-[#d4af37]/30 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={onReturnToTitle}
-            className="px-5 py-2.5 rounded-xl bg-black/55 hover:bg-black/75 border border-amber-500/30 text-sm sm:text-base font-bold text-amber-200 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-black/55 hover:bg-black/75 border border-[#d4af37]/35 text-sm sm:text-base font-bold text-amber-200 cursor-pointer"
           >
             {language === 'bn' ? 'মূল মেনুতে ফিরুন' : 'Return to Title'}
           </button>
 
           {isGameOver ? (
-            <button
-              type="button"
-              data-start="true"
-              onClick={onRematch}
-              className="flex items-center gap-2.5 px-7 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-base sm:text-lg shadow-lg cursor-pointer"
-            >
-              <RotateCcw className="w-5 h-5" />
-              <span>{language === 'bn' ? 'আবার খেলুন (Play Again)' : 'Play Again (Rematch)'}</span>
-            </button>
+            isHost ? (
+              <button
+                type="button"
+                data-start="true"
+                onClick={onRematch}
+                className="flex items-center gap-2.5 px-7 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-base sm:text-lg shadow-lg cursor-pointer"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>{language === 'bn' ? 'আবার খেলুন (Play Again)' : 'Play Again (Rematch)'}</span>
+              </button>
+            ) : (
+              <span className="text-sm sm:text-base font-bold text-amber-300/90">
+                {language === 'bn'
+                  ? 'হোস্ট নতুন ম্যাচ শুরু করার অপেক্ষায়...'
+                  : 'Waiting for Host to restart the match...'}
+              </span>
+            )
           ) : (
             <button
               type="button"
@@ -456,3 +594,4 @@ export const RoundAndGameResultsModal: React.FC<{
     </div>
   );
 };
+

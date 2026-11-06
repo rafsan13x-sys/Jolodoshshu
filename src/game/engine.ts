@@ -9,6 +9,7 @@ import {
   PlayerConfig,
   PlayerState,
   ResolveMerchantAction,
+  TurnPhase,
 } from './types';
 
 export function createDefaultSettings(overrides?: Partial<GameSettings>): GameSettings {
@@ -197,7 +198,8 @@ function eliminatePlayer(
 export function createInitialGameState(
   playerConfigs: PlayerConfig[],
   settings: GameSettings,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
+  hostPlayerId?: string
 ): GameState {
   const players: PlayerState[] = playerConfigs.map((cfg) => ({
     id: cfg.id,
@@ -215,8 +217,11 @@ export function createInitialGameState(
     aiKnownCards: {},
   }));
 
+  const resolvedHostId = hostPlayerId || players[0]?.id || 'player_1';
+
   const state: GameState = {
     matchId: `match_${Math.floor(rng() * 1_000_000)}`,
+    hostPlayerId: resolvedHostId,
     settings,
     round: 1,
     turnNumber: 1,
@@ -489,14 +494,16 @@ export function playCard(prevState: GameState, action: PlayCardAction): GameStat
       break;
   }
 
+  const phaseAfterAbility = state.phase as TurnPhase;
+
   // If Merchant (6) paused the turn to let the player choose 1 of up to 3 cards, wait for resolveMerchantChoice
-  if (state.phase === 'merchant_selection') {
+  if (phaseAfterAbility === 'merchant_selection') {
     return state;
   }
 
   // If a private reveal modal (Ship Worker or Swordsman duel for a human player) is active in local/AI mode,
   // we still check if the round ended or let the player acknowledge the reveal.
-  if (state.phase === 'private_reveal') {
+  if (phaseAfterAbility === 'private_reveal') {
     return state;
   }
 
@@ -1330,3 +1337,127 @@ export function sanitizeStateForPlayer(
 
   return sanitized;
 }
+
+/**
+ * Checks whether `playerId` is the authoritative host of the match.
+ * In local pass-and-play or AI mode, the primary local session is the host.
+ * In online multiplayer mode, only the player matching `state.hostPlayerId` is the host.
+ */
+export function isPlayerHost(
+  state: GameState,
+  playerId: string | null | undefined
+): boolean {
+  if (!playerId) return false;
+  if (state.settings.mode !== 'online') {
+    return playerId === state.hostPlayerId || playerId === state.players[0]?.id;
+  }
+  return state.hostPlayerId === playerId;
+}
+
+/**
+ * Authoritative Host-Only Restart Match:
+ * Resets all player coins and starts a brand-new match from Round 1.
+ * Throws if `requesterId` is not the host.
+ */
+export function restartMatchByHost(
+  prevState: GameState,
+  requesterId: string,
+  rng: () => number = Math.random
+): GameState {
+  if (!isPlayerHost(prevState, requesterId)) {
+    throw new Error('Host permission required: Only the host can restart the match.');
+  }
+  const configs: PlayerConfig[] = prevState.players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    avatar: p.avatar,
+    isAI: p.isAI,
+    aiDifficulty: p.aiDifficulty,
+  }));
+  return createInitialGameState(configs, prevState.settings, rng, prevState.hostPlayerId);
+}
+
+/**
+ * Authoritative Host-Only Refresh / Reinitialize Game:
+ * Reinitializes the current round while preserving accumulated player coins from completed rounds,
+ * or reinitializes the match cleanly if needed.
+ * Throws if `requesterId` is not the host.
+ */
+export function refreshGameByHost(
+  prevState: GameState,
+  requesterId: string,
+  rng: () => number = Math.random
+): GameState {
+  if (!isPlayerHost(prevState, requesterId)) {
+    throw new Error('Host permission required: Only the host can refresh or reinitialize the game.');
+  }
+  const refreshed = setupRound(prevState, 0, rng);
+  addLog(refreshed, {
+    actorId: requesterId,
+    type: 'round_start',
+    textBn: `🔄 হোস্ট খেলাটি রিফ্রেশ ও পুনরায় সাজিয়েছেন (রাউন্ড ${refreshed.round})।`,
+    textEn: `🔄 The host refreshed and reinitialized Round ${refreshed.round}.`,
+  });
+  return refreshed;
+}
+
+/**
+ * Safely handles host disconnection in an online multiplayer room:
+ * - If a non-host disconnects, marks them disconnected and keeps the current host.
+ * - If the host disconnects, transfers host status to the next connected human player.
+ * - If no connected human players remain, signals `shouldCloseRoom: true` so the room closes safely.
+ */
+export function resolveHostOnDisconnect<T extends PlayerConfig & { connected: boolean }>(
+  players: T[],
+  currentHostId: string,
+  disconnectedPlayerId: string,
+  gameState: GameState | null = null
+): {
+  players: T[];
+  hostPlayerId: string;
+  shouldCloseRoom: boolean;
+  hostTransferred: boolean;
+  gameState: GameState | null;
+} {
+  const updatedPlayers = players.map((p) =>
+    p.id === disconnectedPlayerId ? { ...p, connected: false } : { ...p }
+  );
+
+  const connectedHumans = updatedPlayers.filter((p) => !p.isAI && p.connected);
+  if (connectedHumans.length === 0) {
+    return {
+      players: updatedPlayers,
+      hostPlayerId: currentHostId,
+      shouldCloseRoom: true,
+      hostTransferred: false,
+      gameState: null,
+    };
+  }
+
+  let nextHostId = currentHostId;
+  let hostTransferred = false;
+  let updatedGameState = gameState ? structuredClone(gameState) : null;
+
+  if (disconnectedPlayerId === currentHostId) {
+    nextHostId = connectedHumans[0].id;
+    hostTransferred = true;
+    if (updatedGameState) {
+      updatedGameState.hostPlayerId = nextHostId;
+      addLog(updatedGameState, {
+        actorId: nextHostId,
+        type: 'host_transfer',
+        textBn: `👑 পূর্ববর্তী হোস্ট সংযোগ বিচ্ছিন্ন হওয়ায় ${connectedHumans[0].name} এখন নতুন হোস্ট।`,
+        textEn: `👑 Previous host disconnected — ${connectedHumans[0].name} is now the room Host.`,
+      });
+    }
+  }
+
+  return {
+    players: updatedPlayers,
+    hostPlayerId: nextHostId,
+    shouldCloseRoom: false,
+    hostTransferred,
+    gameState: updatedGameState,
+  };
+}
+

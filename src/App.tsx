@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CharacterGuideModal } from './components/CharacterGuideModal';
 import {
+  HostConfirmModal,
   MerchantModal,
   PauseModal,
   PrivacyOverlay,
@@ -18,8 +19,11 @@ import {
   createDefaultPlayers,
   createDefaultSettings,
   createInitialGameState,
+  isPlayerHost,
   playCard,
+  refreshGameByHost,
   resolveMerchantChoice,
+  restartMatchByHost,
   startNextRound,
   unlockPrivacyScreen,
 } from './game/engine';
@@ -49,6 +53,9 @@ export default function App() {
   );
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [hostConfirmAction, setHostConfirmAction] = useState<'restart' | 'refresh' | null>(
+    null
+  );
 
   // Modals
   const [lobbyOpen, setLobbyOpen] = useState(false);
@@ -68,6 +75,15 @@ export default function App() {
   const [onlineRoom, setOnlineRoom] = useState<OnlineRoomPayload | null>(null);
   const [onlineError, setOnlineError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Authoritative check whether the current viewer is the Host
+  const isViewerHost = Boolean(
+    gameState &&
+      (gameState.settings.mode === 'online'
+        ? isPlayerHost(gameState, localOnlinePlayerId) &&
+          (!onlineRoom || onlineRoom.hostPlayerId === localOnlinePlayerId)
+        : isPlayerHost(gameState, gameState.players[0]?.id))
+  );
 
   // Sync audio manager
   useEffect(() => {
@@ -97,10 +113,16 @@ export default function App() {
         mode: modeToUse,
         playerCount: pList.length,
       };
-      const initial = createInitialGameState(pList, normalizedSettings);
+      const initial = createInitialGameState(
+        pList,
+        normalizedSettings,
+        Math.random,
+        pList[0]?.id
+      );
       setSettings(normalizedSettings);
       setGameState(initial);
       setIsPaused(false);
+      setHostConfirmAction(null);
       setLobbyOpen(false);
       soundFX.playCardDeal();
     },
@@ -115,7 +137,7 @@ export default function App() {
     }
   }, []);
 
-  // Global keyboard shortcuts (Enter/Space on Title, Esc/P for Pause, G for Guide, M for Mute, R for Restart)
+  // Global keyboard shortcuts (Enter/Space on Title, Esc/P for Pause, G for Guide, M for Mute, Host-Only R for Restart)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -135,6 +157,10 @@ export default function App() {
       }
 
       if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+        if (hostConfirmAction) {
+          setHostConfirmAction(null);
+          return;
+        }
         if (guideOpen) {
           setGuideOpen(false);
           return;
@@ -161,9 +187,9 @@ export default function App() {
       } else if (e.key.toLowerCase() === 'm') {
         e.preventDefault();
         setSettings((prev) => ({ ...prev, soundEnabled: !prev.soundEnabled }));
-      } else if (e.key.toLowerCase() === 'r' && gameState && settings.mode !== 'online') {
+      } else if (e.key.toLowerCase() === 'r' && gameState && isViewerHost) {
         e.preventDefault();
-        startLocalOrAIMatch();
+        setHostConfirmAction('restart');
       }
     };
 
@@ -171,11 +197,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     gameState,
+    isViewerHost,
+    hostConfirmAction,
     lobbyOpen,
     guideOpen,
     howToPlayOpen,
     settingsOpen,
-    settings.mode,
     startLocalOrAIMatch,
   ]);
 
@@ -210,7 +237,8 @@ export default function App() {
 
   // Automatic AI turns for Local/AI mode
   useEffect(() => {
-    if (!gameState || isPaused || gameState.settings.mode === 'online') return;
+    if (!gameState || isPaused || hostConfirmAction || gameState.settings.mode === 'online')
+      return;
 
     if (gameState.phase === 'choosing_action') {
       const activePlayer = gameState.players[gameState.activePlayerIndex];
@@ -241,7 +269,7 @@ export default function App() {
         return () => clearTimeout(timer);
       }
     }
-  }, [gameState, isPaused]);
+  }, [gameState, isPaused, hostConfirmAction]);
 
   // WebSocket Connection Helper for Online Mode
   const ensureWebSocket = useCallback((): Promise<WebSocket> => {
@@ -363,14 +391,38 @@ export default function App() {
     setGameState((prev) => (prev ? startNextRound(prev) : prev));
   };
 
-  const handleRematch = () => {
-    if (!gameState) return;
+  // Requesting Restart or Refresh always checks host status and opens the confirmation modal
+  const requestHostRestart = () => {
+    if (!gameState || !isViewerHost) return;
+    setHostConfirmAction('restart');
+  };
+
+  const requestHostRefresh = () => {
+    if (!gameState || !isViewerHost) return;
+    setHostConfirmAction('refresh');
+  };
+
+  // Executed only after Host confirms in HostConfirmModal
+  const executeConfirmedHostAction = () => {
+    if (!gameState || !isViewerHost || !hostConfirmAction) return;
+    const actionToRun = hostConfirmAction;
+    setHostConfirmAction(null);
+    setIsPaused(false);
     soundFX.playCardDeal();
+
     if (gameState.settings.mode === 'online') {
-      sendOnlineMessage({ type: 'rematch' });
+      sendOnlineMessage({
+        type: actionToRun === 'restart' ? 'restart_match' : 'refresh_game',
+      });
       return;
     }
-    startLocalOrAIMatch();
+
+    const hostId = gameState.hostPlayerId;
+    if (actionToRun === 'restart') {
+      setGameState((prev) => (prev ? restartMatchByHost(prev, hostId) : prev));
+    } else {
+      setGameState((prev) => (prev ? refreshGameByHost(prev, hostId) : prev));
+    }
   };
 
   return (
@@ -410,6 +462,7 @@ export default function App() {
         <GameTable
           state={gameState}
           viewerPlayerId={getViewerPlayerId()}
+          isHost={isViewerHost}
           language={settings.language}
           soundEnabled={settings.soundEnabled}
           onToggleSound={() =>
@@ -425,7 +478,8 @@ export default function App() {
           }}
           onOpenHowToPlay={() => setHowToPlayOpen(true)}
           onOpenPause={() => setIsPaused(true)}
-          onRestartMatch={handleRematch}
+          onRequestRestart={requestHostRestart}
+          onRequestRefresh={requestHostRefresh}
           onlineRoomCode={onlineRoom?.code ?? null}
         />
       )}
@@ -469,12 +523,14 @@ export default function App() {
         (gameState.phase === 'round_over' || gameState.phase === 'game_over') && (
           <RoundAndGameResultsModal
             state={gameState}
+            isHost={isViewerHost}
             language={settings.language}
             onNextRound={handleNextRound}
-            onRematch={handleRematch}
+            onRematch={requestHostRestart}
             onReturnToTitle={() => {
               setGameState(null);
               setIsPaused(false);
+              setHostConfirmAction(null);
             }}
           />
         )}
@@ -482,13 +538,25 @@ export default function App() {
       {/* Pause Modal */}
       <PauseModal
         isOpen={Boolean(gameState && isPaused)}
+        isHost={isViewerHost}
         language={settings.language}
         onResume={() => setIsPaused(false)}
-        onRestart={handleRematch}
+        onRequestRestart={requestHostRestart}
+        onRequestRefresh={requestHostRefresh}
         onReturnToTitle={() => {
           setGameState(null);
           setIsPaused(false);
+          setHostConfirmAction(null);
         }}
+      />
+
+      {/* Host-Only Restart / Refresh Confirmation Dialog */}
+      <HostConfirmModal
+        actionType={hostConfirmAction}
+        isHost={isViewerHost}
+        language={settings.language}
+        onConfirm={executeConfirmedHostAction}
+        onCancel={() => setHostConfirmAction(null)}
       />
 
       {/* Lobby Modal */}
@@ -558,3 +626,4 @@ export default function App() {
     </>
   );
 }
+

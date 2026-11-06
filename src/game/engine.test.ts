@@ -7,9 +7,13 @@ import {
   createDefaultSettings,
   createInitialGameState,
   getPlayableCardUids,
+  isPlayerHost,
   mustPlayCaptain,
   playCard,
+  refreshGameByHost,
+  resolveHostOnDisconnect,
   resolveMerchantChoice,
+  restartMatchByHost,
   sanitizeStateForPlayer,
   scoreRoundEnd,
   startNextRound,
@@ -358,3 +362,64 @@ test('10. Hidden-information protection masks opponent hands, removed card, and 
   assert.equal(sanitizedForP0.removedCard?.uid, 'hidden_removed_card');
   assert.equal(sanitizedForP0.removedCard?.value, 0);
 });
+
+test('11. Host-only Restart and Refresh permissions reject guests and allow only the host', () => {
+  const settings = createDefaultSettings({ playerCount: 3, mode: 'online' });
+  const players = createDefaultPlayers(3, 'online');
+  let state = createInitialGameState(players, settings, makeDeterministicRng(77), 'player_1');
+
+  state.players[0].coins = 2;
+  state.round = 3;
+
+  assert.equal(isPlayerHost(state, 'player_1'), true);
+  assert.equal(isPlayerHost(state, 'player_2'), false);
+  assert.equal(isPlayerHost(state, 'player_3'), false);
+
+  // Guest attempting restartMatchByHost or refreshGameByHost must be rejected
+  assert.throws(() => {
+    restartMatchByHost(state, 'player_2', makeDeterministicRng(88));
+  }, /Host permission required/);
+
+  assert.throws(() => {
+    refreshGameByHost(state, 'player_3', makeDeterministicRng(88));
+  }, /Host permission required/);
+
+  // Host refreshing game preserves round and coins while re-dealing round cards
+  const refreshed = refreshGameByHost(state, 'player_1', makeDeterministicRng(88));
+  assert.equal(refreshed.round, 3);
+  assert.equal(refreshed.players[0].coins, 2);
+
+  // Host restarting match resets round to 1 and coins to 0
+  const restarted = restartMatchByHost(refreshed, 'player_1', makeDeterministicRng(89));
+  assert.equal(restarted.round, 1);
+  assert.equal(restarted.players[0].coins, 0);
+  assert.equal(restarted.hostPlayerId, 'player_1');
+});
+
+test('12. Host disconnection safely transfers host to next connected human or closes room when empty', () => {
+  const settings = createDefaultSettings({ playerCount: 3, mode: 'online' });
+  const roomPlayers = [
+    { id: 'host_1', name: 'Host Captain', avatar: '🏴‍☠️', isAI: false, connected: true },
+    { id: 'guest_2', name: 'Guest Sailor', avatar: '🧭', isAI: false, connected: true },
+    { id: 'bot_3', name: 'Bot Gunner', avatar: '💣', isAI: true, connected: true },
+  ];
+  const state = createInitialGameState(roomPlayers, settings, makeDeterministicRng(60), 'host_1');
+
+  // Host disconnects -> guest_2 becomes the new host
+  const transferOutcome = resolveHostOnDisconnect(roomPlayers, 'host_1', 'host_1', state);
+  assert.equal(transferOutcome.shouldCloseRoom, false);
+  assert.equal(transferOutcome.hostTransferred, true);
+  assert.equal(transferOutcome.hostPlayerId, 'guest_2');
+  assert.equal(transferOutcome.gameState?.hostPlayerId, 'guest_2');
+
+  // Now guest_2 also disconnects (only AI bot left) -> room closes safely
+  const closeOutcome = resolveHostOnDisconnect(
+    transferOutcome.players,
+    transferOutcome.hostPlayerId,
+    'guest_2',
+    transferOutcome.gameState
+  );
+  assert.equal(closeOutcome.shouldCloseRoom, true);
+  assert.equal(closeOutcome.gameState, null);
+});
+
