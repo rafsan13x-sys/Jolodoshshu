@@ -1,0 +1,6 @@
+{
+  "name": "জলদস্যু (Jolodoshshu) — Pirate Card Game",
+  "description": "A strategic Bengali pirate card game of bluffing, deduction, cannon fire, and coin plundering for solo AI, pass-and-play, and online multiplayer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
