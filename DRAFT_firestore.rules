@@ -1,0 +1,341 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Reusable Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isValidVaultKey(vaultId) {
+      return vaultId is string
+        && vaultId.size() == 44
+        && vaultId == 'vlt_9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e';
+    }
+
+    // 3. Entity Validation Blueprints (Anti-Update-Gap)
+    function isValidPublicUserProfile(data, userId) {
+      return data.keys().hasAll([
+          'playerId',
+          'username',
+          'avatar',
+          'level',
+          'xp',
+          'totalMatches',
+          'wins',
+          'losses',
+          'coins',
+          'rankedRating',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'playerId',
+          'username',
+          'avatar',
+          'level',
+          'xp',
+          'totalMatches',
+          'wins',
+          'losses',
+          'coins',
+          'rankedRating',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.playerId is string
+        && data.playerId.size() >= 3
+        && data.playerId.size() <= 64
+        && data.playerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.playerId == userId
+        && data.username is string
+        && data.username.size() >= 3
+        && data.username.size() <= 20
+        && data.avatar is string
+        && data.avatar.size() >= 1
+        && data.avatar.size() <= 16
+        && data.level is int
+        && data.level >= 1
+        && data.level <= 999
+        && data.xp is int
+        && data.xp >= 0
+        && data.xp <= 10000000
+        && data.totalMatches is int
+        && data.totalMatches >= 0
+        && data.totalMatches <= 1000000
+        && data.wins is int
+        && data.wins >= 0
+        && data.wins <= 1000000
+        && data.losses is int
+        && data.losses >= 0
+        && data.losses <= 1000000
+        && data.coins is int
+        && data.coins >= 0
+        && data.coins <= 100000000
+        && data.rankedRating is int
+        && data.rankedRating >= 0
+        && data.rankedRating <= 50000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateUserAccount(data, userId) {
+      return data.keys().hasAll([
+          'playerId',
+          'recoveryConfigured',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'playerId',
+          'recoveryConfigured',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.playerId is string
+        && data.playerId.size() >= 3
+        && data.playerId.size() <= 64
+        && data.playerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.playerId == userId
+        && data.recoveryConfigured is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVaultAccountRecord(data, accountId) {
+      return data.keys().hasAll([
+          'playerId',
+          'username',
+          'usernameLower',
+          'avatar',
+          'passwordHash',
+          'passwordSalt',
+          'recoveryHash',
+          'recoverySalt',
+          'hasRecovery',
+          'level',
+          'xp',
+          'totalMatches',
+          'wins',
+          'losses',
+          'coins',
+          'rankedRating',
+          'createdAtIso',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'playerId',
+          'username',
+          'usernameLower',
+          'avatar',
+          'passwordHash',
+          'passwordSalt',
+          'recoveryHash',
+          'recoverySalt',
+          'hasRecovery',
+          'level',
+          'xp',
+          'totalMatches',
+          'wins',
+          'losses',
+          'coins',
+          'rankedRating',
+          'createdAtIso',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.playerId is string
+        && data.playerId.size() >= 3
+        && data.playerId.size() <= 64
+        && data.playerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.playerId == accountId
+        && data.username is string
+        && data.username.size() >= 3
+        && data.username.size() <= 20
+        && data.usernameLower is string
+        && data.usernameLower.size() >= 3
+        && data.usernameLower.size() <= 20
+        && data.avatar is string
+        && data.avatar.size() >= 1
+        && data.avatar.size() <= 16
+        && data.passwordHash is string
+        && data.passwordHash.size() >= 64
+        && data.passwordHash.size() <= 256
+        && data.passwordSalt is string
+        && data.passwordSalt.size() >= 16
+        && data.passwordSalt.size() <= 128
+        && data.recoveryHash is string
+        && data.recoveryHash.size() >= 0
+        && data.recoveryHash.size() <= 256
+        && data.recoverySalt is string
+        && data.recoverySalt.size() >= 0
+        && data.recoverySalt.size() <= 128
+        && data.hasRecovery is bool
+        && data.level is int
+        && data.level >= 1
+        && data.level <= 999
+        && data.xp is int
+        && data.xp >= 0
+        && data.xp <= 10000000
+        && data.totalMatches is int
+        && data.totalMatches >= 0
+        && data.totalMatches <= 1000000
+        && data.wins is int
+        && data.wins >= 0
+        && data.wins <= 1000000
+        && data.losses is int
+        && data.losses >= 0
+        && data.losses <= 1000000
+        && data.coins is int
+        && data.coins >= 0
+        && data.coins <= 100000000
+        && data.rankedRating is int
+        && data.rankedRating >= 0
+        && data.rankedRating <= 50000
+        && data.createdAtIso is string
+        && data.createdAtIso.size() >= 10
+        && data.createdAtIso.size() <= 40
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVaultUsernameIndex(data, usernameKey) {
+      return data.keys().hasAll([
+          'usernameKey',
+          'usernameLower',
+          'playerId',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'usernameKey',
+          'usernameLower',
+          'playerId',
+          'createdAt'
+        ])
+        && data.usernameKey is string
+        && data.usernameKey.size() >= 3
+        && data.usernameKey.size() <= 128
+        && data.usernameKey.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.usernameKey == usernameKey
+        && data.usernameLower is string
+        && data.usernameLower.size() >= 3
+        && data.usernameLower.size() <= 20
+        && data.playerId is string
+        && data.playerId.size() >= 3
+        && data.playerId.size() <= 64
+        && data.playerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.createdAt is timestamp;
+    }
+
+    // 4. Collection Match Blocks
+    match /users/{userId}/public/{profileId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(profileId);
+      allow list: if isOwner(userId) && resource.data.playerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(profileId)
+        && isValidPublicUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(profileId)
+        && isValidPublicUserProfile(incoming(), userId)
+        && incoming().playerId == existing().playerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['level', 'xp', 'totalMatches', 'wins', 'losses', 'coins', 'rankedRating', 'updatedAt'])
+        );
+      allow delete: if false;
+    }
+
+    match /users/{userId}/private/{secretId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(secretId);
+      allow list: if false;
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(secretId)
+        && isValidPrivateUserAccount(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(secretId)
+        && isValidPrivateUserAccount(incoming(), userId)
+        && incoming().playerId == existing().playerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['recoveryConfigured', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /vaults/{vaultId}/accounts/{accountId} {
+      allow get: if isValidVaultKey(vaultId) && isValidId(accountId);
+      allow list: if false;
+      allow create: if isValidVaultKey(vaultId)
+        && isValidId(accountId)
+        && isValidVaultAccountRecord(incoming(), accountId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidVaultKey(vaultId)
+        && isValidId(accountId)
+        && isValidVaultAccountRecord(incoming(), accountId)
+        && incoming().playerId == existing().playerId
+        && incoming().username == existing().username
+        && incoming().usernameLower == existing().usernameLower
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Update Avatar or Recovery Configuration
+          incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'recoveryHash', 'recoverySalt', 'hasRecovery', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['recoveryHash', 'recoverySalt', 'hasRecovery', 'updatedAt'])
+          // Action 2: Reset Password via Verified Recovery
+          || incoming().diff(existing()).affectedKeys().hasOnly(['passwordHash', 'passwordSalt', 'updatedAt'])
+          // Action 3: Server-Authoritative Match Progression Update
+          || incoming().diff(existing()).affectedKeys().hasOnly(['level', 'xp', 'totalMatches', 'wins', 'losses', 'coins', 'rankedRating', 'updatedAt'])
+        );
+      allow delete: if false;
+    }
+
+    match /vaults/{vaultId}/usernames/{usernameKey} {
+      allow get: if isValidVaultKey(vaultId) && isValidId(usernameKey);
+      allow list: if false;
+      allow create: if isValidVaultKey(vaultId)
+        && isValidId(usernameKey)
+        && isValidVaultUsernameIndex(incoming(), usernameKey)
+        && incoming().createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/vaults/$(vaultId)/accounts/$(incoming().playerId));
+      allow update, delete: if false;
+    }
+  }
+}

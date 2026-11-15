@@ -1,0 +1,305 @@
+{
+  "entities": {
+    "PublicUserProfile": {
+      "title": "PublicUserProfile",
+      "description": "Public pirate player profile containing progression, match statistics, and avatar.",
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string",
+          "description": "Unique immutable player identifier.",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "description": "Unique player display username.",
+          "minLength": 3,
+          "maxLength": 20
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Selected pirate avatar icon.",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "level": {
+          "type": "integer",
+          "description": "Current pirate captain level (1+)."
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Total experience points earned."
+        },
+        "totalMatches": {
+          "type": "integer",
+          "description": "Total completed matches."
+        },
+        "wins": {
+          "type": "integer",
+          "description": "Total match wins."
+        },
+        "losses": {
+          "type": "integer",
+          "description": "Total match losses."
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Total career pirate coins."
+        },
+        "rankedRating": {
+          "type": "integer",
+          "description": "Ranked multiplayer rating."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was last updated."
+        }
+      },
+      "required": [
+        "playerId",
+        "username",
+        "avatar",
+        "level",
+        "xp",
+        "totalMatches",
+        "wins",
+        "losses",
+        "coins",
+        "rankedRating",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PrivateUserAccount": {
+      "title": "PrivateUserAccount",
+      "description": "Isolated private account settings for the owner only.",
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string",
+          "description": "Owner player ID.",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recoveryConfigured": {
+          "type": "boolean",
+          "description": "Whether a verified recovery passphrase is configured."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp."
+        }
+      },
+      "required": [
+        "playerId",
+        "recoveryConfigured",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VaultAccountRecord": {
+      "title": "VaultAccountRecord",
+      "description": "Authoritative server vault record for custom in-game pirate accounts with scrypt password hashes.",
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string",
+          "description": "Unique immutable player ID.",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "description": "Display username.",
+          "minLength": 3,
+          "maxLength": 20
+        },
+        "usernameLower": {
+          "type": "string",
+          "description": "Canonical lowercase username.",
+          "minLength": 3,
+          "maxLength": 20
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Pirate avatar emoji.",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "passwordHash": {
+          "type": "string",
+          "description": "Hex-encoded scrypt password hash.",
+          "minLength": 64,
+          "maxLength": 256
+        },
+        "passwordSalt": {
+          "type": "string",
+          "description": "Hex-encoded cryptographic salt for password.",
+          "minLength": 16,
+          "maxLength": 128
+        },
+        "recoveryHash": {
+          "type": "string",
+          "description": "Hex-encoded scrypt hash of optional recovery passphrase.",
+          "minLength": 0,
+          "maxLength": 256
+        },
+        "recoverySalt": {
+          "type": "string",
+          "description": "Hex-encoded salt for recovery passphrase.",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "hasRecovery": {
+          "type": "boolean",
+          "description": "Whether verified password recovery is enabled."
+        },
+        "level": {
+          "type": "integer",
+          "description": "Player level."
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Player experience points."
+        },
+        "totalMatches": {
+          "type": "integer",
+          "description": "Total matches played."
+        },
+        "wins": {
+          "type": "integer",
+          "description": "Total matches won."
+        },
+        "losses": {
+          "type": "integer",
+          "description": "Total matches lost."
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Total career coins."
+        },
+        "rankedRating": {
+          "type": "integer",
+          "description": "Ranked multiplayer rating."
+        },
+        "createdAtIso": {
+          "type": "string",
+          "description": "ISO creation date string for profile display.",
+          "minLength": 10,
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp of creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp of last update."
+        }
+      },
+      "required": [
+        "playerId",
+        "username",
+        "usernameLower",
+        "avatar",
+        "passwordHash",
+        "passwordSalt",
+        "recoveryHash",
+        "recoverySalt",
+        "hasRecovery",
+        "level",
+        "xp",
+        "totalMatches",
+        "wins",
+        "losses",
+        "coins",
+        "rankedRating",
+        "createdAtIso",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VaultUsernameIndex": {
+      "title": "VaultUsernameIndex",
+      "description": "Unique username reservation index mapping canonical lowercase username to playerId.",
+      "type": "object",
+      "properties": {
+        "usernameKey": {
+          "type": "string",
+          "description": "Hex-encoded canonical username key.",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "usernameLower": {
+          "type": "string",
+          "description": "Canonical lowercase username.",
+          "minLength": 3,
+          "maxLength": 20
+        },
+        "playerId": {
+          "type": "string",
+          "description": "Associated playerId.",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of reservation."
+        }
+      },
+      "required": [
+        "usernameKey",
+        "usernameLower",
+        "playerId",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/public/{profileId}": {
+      "schema": {
+        "$ref": "#/entities/PublicUserProfile"
+      },
+      "description": "Public player profile subcollection."
+    },
+    "/users/{userId}/private/{secretId}": {
+      "schema": {
+        "$ref": "#/entities/PrivateUserAccount"
+      },
+      "description": "Owner-only isolated private account metadata."
+    },
+    "/vaults/{vaultId}/accounts/{accountId}": {
+      "schema": {
+        "$ref": "#/entities/VaultAccountRecord"
+      },
+      "description": "Authoritative backend account vault keyed by server secret."
+    },
+    "/vaults/{vaultId}/usernames/{usernameKey}": {
+      "schema": {
+        "$ref": "#/entities/VaultUsernameIndex"
+      },
+      "description": "Authoritative backend username uniqueness index."
+    }
+  }
+}

@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Cinzel', 'Hind Siliguri', serif;
+    --font-bengali: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+    --font-sans: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html,
+  body {
+    font-family: var(--font-bengali);
+    background-color: #0b1520;
+    color: #f5ebd6;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+.safe-area-shell {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.font-display-pirate {
+  font-family: var(--font-display);
+}
+
+.font-bengali {
+  font-family: var(--font-bengali);
+  line-height: 1.5;
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbar for logs and guides */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 130, 70, 0.45);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 160, 91, 0.75);
+}
+
+/* Ship deck wood, dark walnut, deep ocean green, antique gold & parchment textures */
+.wood-deck-bg {
+  background-color: #0e1e1b;
+  background-image:
+    radial-gradient(ellipse at 50% 42%, rgba(36, 22, 14, 0.86) 0%, rgba(11, 35, 30, 0.94) 68%, rgba(8, 22, 19, 0.99) 100%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(212, 175, 55, 0.03) 0px,
+      rgba(212, 175, 55, 0.03) 2px,
+      transparent 2px,
+      transparent 72px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.34) 0px,
+      rgba(0, 0, 0, 0.34) 2px,
+      rgba(38, 23, 14, 0.22) 2px,
+      rgba(38, 23, 14, 0.22) 42px
+    );
+}
+
+.parchment-panel {
+  background-color: #ecd9b4;
+  background-image:
+    radial-gradient(circle at 50% 35%, rgba(252, 243, 222, 0.85), rgba(218, 190, 140, 0.96));
+  color: #23160c;
+  border: 1px solid rgba(168, 126, 53, 0.55);
+}
+
+.parchment-scroll-box {
+  background-color: #25180f;
+  background-image:
+    linear-gradient(180deg, rgba(46, 30, 19, 0.96) 0%, rgba(29, 18, 11, 0.98) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 232, 185, 0.14), 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.ocean-felt-well {
+  background-color: #0b2621;
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(19, 59, 51, 0.92) 0%, rgba(9, 31, 27, 0.98) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  box-shadow: inset 0 3px 16px rgba(0, 0, 0, 0.65);
+}
+
+.cabin-wood-panel {
+  background-color: #1f130c;
+  background-image: linear-gradient(180deg, rgba(44, 28, 18, 0.96) 0%, rgba(24, 15, 9, 0.99) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 228, 175, 0.14);
+}
+
+/* 2D Card Animations (Compositor-Only transform & opacity) */
+@keyframes cardSlideToPlay {
+  0% {
+    opacity: 0.35;
+    transform: translateY(42px) scale(0.88) rotate(3deg);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.03) rotate(-1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes cardFlip2D {
+  0% {
+    opacity: 0.7;
+    transform: translateY(8px) scaleX(0.08) scaleY(0.96);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-4px) scaleX(1.03) scaleY(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes cardDealIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-22px) translateX(-14px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+}
+
+@keyframes cardDiscardSettle {
+  0% {
+    opacity: 0.5;
+    transform: translateY(-18px) scale(1.08) rotate(-3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes abilityEffectPop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-card-slide-play {
+  animation: cardSlideToPlay 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-card-flip-2d {
+  animation: cardFlip2D 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-card-deal {
+  animation: cardDealIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-card-discard {
+  animation: cardDiscardSettle 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-ability-pop {
+  animation: abilityEffectPop 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
