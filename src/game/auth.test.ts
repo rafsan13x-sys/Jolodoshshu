@@ -16,10 +16,10 @@ import {
   createSessionToken,
   hashSecretWithSalt,
   revokeSessionToken,
-  StoredVaultAccount,
   verifySecretHash,
   verifySessionToken,
 } from '../server/accountStore.ts';
+import type { StoredVaultAccount } from '../server/accountStore.ts';
 
 describe('Jolodoshshu Custom Account & Security Logic', () => {
   it('validates usernames in both Bengali and English and blocks reserved Guest prefixes', () => {

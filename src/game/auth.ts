@@ -1,4 +1,4 @@
-import { PIRATE_AVATARS } from './cards';
+import { PIRATE_AVATARS } from './cards.ts';
 
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 20;

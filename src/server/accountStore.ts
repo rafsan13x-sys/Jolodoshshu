@@ -11,7 +11,6 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
 import { PIRATE_AVATARS } from '../game/cards.ts';
 import {
   calculateLevelFromXp,
@@ -19,11 +18,11 @@ import {
   encodeUsernameKey,
   getPirateRankTitle,
   normalizeUsername,
-  PlayerAccountProfile,
   validatePassword,
   validateRegistrationInput,
   validateUsername,
 } from '../game/auth.ts';
+import type { PlayerAccountProfile } from '../game/auth.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +32,37 @@ const TOKEN_SECRET =
   process.env.JOLODOSHSHU_SESSION_SECRET ||
   'jolodoshshu_pirate_hmac_secret_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d';
 
+interface FirebaseAppletConfig {
+  projectId: string;
+  appId: string;
+  apiKey: string;
+  authDomain: string;
+  firestoreDatabaseId: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+}
+
+function loadFirebaseAppletConfig(): FirebaseAppletConfig {
+  const configPath = path.resolve(__dirname, '../../firebase-applet-config.json');
+  try {
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8')) as FirebaseAppletConfig;
+    }
+  } catch (err) {
+    console.error('Failed to read firebase-applet-config.json:', err);
+  }
+  return {
+    projectId: process.env.FIREBASE_PROJECT_ID || 'phat-market-td997',
+    appId: process.env.FIREBASE_APP_ID || '1:275684661973:web:f0dc9890218e5bb6a6e13b',
+    apiKey: process.env.FIREBASE_API_KEY || '',
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'phat-market-td997.firebaseapp.com',
+    firestoreDatabaseId:
+      process.env.FIRESTORE_DATABASE_ID ||
+      'ai-studio-jolodoshshupirat-715141af-8a45-4700-93ea-8385ec8a5f90',
+  };
+}
+
+const firebaseConfig = loadFirebaseAppletConfig();
 const fbApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(fbApp, firebaseConfig.firestoreDatabaseId);
 

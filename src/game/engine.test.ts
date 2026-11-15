@@ -17,8 +17,8 @@ import {
   sanitizeStateForPlayer,
   scoreRoundEnd,
   startNextRound,
-} from './engine';
-import { computeAIMove } from './ai';
+} from './engine.ts';
+import { computeAIMove } from './ai.ts';
 import {
   GAME_MODE_CONFIGS,
   GAME_MODE_LIST,
@@ -26,9 +26,9 @@ import {
   balanceTeams,
   randomizeTeams,
   validateLobbyForMode,
-} from './modes';
-import { DEFAULT_DECK_COUNTS } from './cards';
-import { CardInstance, GameState } from './types';
+} from './modes.ts';
+import { DEFAULT_DECK_COUNTS } from './cards.ts';
+import type { CardInstance, GameState } from './types.ts';
 
 function makeDeterministicRng(seed = 42): () => number {
   let s = seed;
